@@ -1,0 +1,60 @@
+name: Magento module CI
+
+# Reusable workflow for PixelPerfect Magento modules on GitHub (the OSS ones).
+# Consume from a module's .github/workflows/ci.yml:
+#   jobs:
+#     ci:
+#       uses: pixelperfect-at-m2-modules/ci-templates/.github/workflows/magento-module.yml@main
+#       secrets: inherit
+# Requires secrets: MAGENTO_PUBLIC_KEY, MAGENTO_PRIVATE_KEY (+ GITLAB_TOKEN if the module has a
+# private GitLab dependency, e.g. pixelperfectat/coding-standard).
+# Note: GitHub reusable workflows must live in a GitHub repo — this file works once ci-templates
+# is mirrored to GitHub. Private GitLab-hosted modules use /gitlab/magento-module.yml instead.
+
+on:
+  workflow_call:
+    secrets:
+      MAGENTO_PUBLIC_KEY:
+        required: true
+      MAGENTO_PRIVATE_KEY:
+        required: true
+      GITLAB_TOKEN:
+        required: false
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3 (+ Magento extensions)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: bcmath, ctype, curl, dom, gd, hash, iconv, intl, mbstring, openssl, pdo_mysql, simplexml, soap, sodium, xsl, zip, fileinfo
+          tools: composer
+          coverage: none
+
+      - name: Auth git for private GitLab dependencies
+        if: ${{ secrets.GITLAB_TOKEN != '' }}
+        run: git config --global url."https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/".insteadOf "https://gitlab.com/"
+
+      - name: Authenticate Composer for repo.magento.com
+        run: composer config --global --auth http-basic.repo.magento.com "${{ secrets.MAGENTO_PUBLIC_KEY }}" "${{ secrets.MAGENTO_PRIVATE_KEY }}"
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --no-ansi
+
+      - name: composer validate
+        run: composer ci:validate
+
+      - name: Lint + coding standard
+        run: |
+          composer lint
+          composer cs
+
+      - name: Static analysis
+        run: composer stan
+
+      - name: Unit tests
+        run: composer test

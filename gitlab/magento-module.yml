@@ -1,0 +1,77 @@
+# Reusable CI pipeline for a PixelPerfect Magento module.
+#
+# Consume from a module's .gitlab-ci.yml:
+#   include:
+#     - project: pixelperfect-at-m2-modules/ci-templates
+#       ref: main
+#       file: /gitlab/magento-module.yml
+#
+# Required CI/CD variables on the module project (masked):
+#   MAGENTO_PUBLIC_KEY  / MAGENTO_PRIVATE_KEY   → Composer http-basic for repo.magento.com
+# Private inter-module deps (coding-standard, other pixelperfectat modules) are cloned via the
+# built-in CI_JOB_TOKEN — allowlist this group under each depended-on repo's CI/CD → Token Access.
+
+image: markoshust/magento-php:8.3-fpm
+
+stages:
+  - validate
+  - lint
+  - analyse
+  - test
+  - release
+
+variables:
+  COMPOSER_ALLOW_SUPERUSER: "1"
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer-cache"
+
+default:
+  cache:
+    key: composer-$CI_COMMIT_REF_SLUG
+    paths:
+      - vendor/
+      - .composer-cache/
+  before_script:
+    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
+    - composer config --global --auth http-basic.repo.magento.com "$MAGENTO_PUBLIC_KEY" "$MAGENTO_PRIVATE_KEY"
+    - composer install --no-interaction --no-progress --no-ansi
+
+validate:
+  stage: validate
+  script:
+    - composer ci:validate
+
+lint:
+  stage: lint
+  script:
+    - composer lint
+    - composer cs
+
+analyse:
+  stage: analyse
+  script:
+    - composer stan
+
+test:
+  stage: test
+  script:
+    - composer test
+
+# On a semver tag push, publish a GitLab Release using the matching CHANGELOG.md section.
+create-release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  cache: []
+  before_script: []
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/
+  script:
+    - |
+      if [ -f CHANGELOG.md ]; then
+        awk "/^## \\[${CI_COMMIT_TAG}\\]/{f=1;next} /^## \\[/{if(f)exit} f" CHANGELOG.md > release_notes.md
+      fi
+      [ -s release_notes.md ] || printf "Release %s\n" "$CI_COMMIT_TAG" > release_notes.md
+      cat release_notes.md
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: "Version $CI_COMMIT_TAG"
+    description: release_notes.md
