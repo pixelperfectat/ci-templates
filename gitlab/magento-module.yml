@@ -33,6 +33,7 @@ default:
   before_script:
     - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
     - composer config --global --auth http-basic.repo.magento.com "$MAGENTO_PUBLIC_KEY" "$MAGENTO_PRIVATE_KEY"
+    - composer config --global --auth http-basic.gitlab.com gitlab-ci-token "$CI_JOB_TOKEN"
     - composer install --no-interaction --no-progress --no-ansi
 
 commitlint:
