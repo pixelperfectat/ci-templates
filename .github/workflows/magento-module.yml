@@ -72,8 +72,10 @@ jobs:
             return $FAILED
           }
 
-          if [ -n "$BASE" ]; then
-            COMMITS="$(git log --format="%H" "${BASE}..HEAD" 2>/dev/null)"
+          # Only diff a base that's actually reachable; a force-push can orphan the old
+          # before-SHA, and 'git log <gone>..HEAD' fails (exit 128) under set -e.
+          if [ -n "$BASE" ] && git rev-parse -q --verify "${BASE}^{commit}" >/dev/null 2>&1; then
+            COMMITS="$(git log --format="%H" "${BASE}..HEAD")"
           else
             COMMITS="$(git rev-parse HEAD)"
           fi

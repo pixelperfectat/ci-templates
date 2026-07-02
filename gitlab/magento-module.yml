@@ -94,9 +94,13 @@ commitlint:
 
       if [ -n "$BASE" ]; then
         git fetch --depth=50 origin "$BASE" 2>/dev/null || true
-        COMMITS="$(git log --format="%H" "${BASE}..${CI_COMMIT_SHA}" 2>/dev/null)"
+      fi
+      # Only diff a base that's actually reachable; a force-push can orphan the old
+      # before-SHA, and 'git log <gone>..SHA' fails (exit 128) under set -e.
+      if [ -n "$BASE" ] && git rev-parse -q --verify "${BASE}^{commit}" >/dev/null 2>&1; then
+        COMMITS="$(git log --format="%H" "${BASE}..${CI_COMMIT_SHA}")"
       else
-        # New branch / first push — check the tip commit only
+        # New branch / first push / orphaned base — check the tip commit only
         COMMITS="$CI_COMMIT_SHA"
       fi
 
