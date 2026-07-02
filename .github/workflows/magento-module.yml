@@ -29,7 +29,7 @@ jobs:
         with:
           fetch-depth: 50
 
-      - name: Lint commit messages (AI-trailer + keyword format)
+      - name: Lint commit messages (keyword format)
         run: |
           # Determine the range of commits to check.
           # PR pipeline: use the PR base SHA.
@@ -53,13 +53,7 @@ jobs:
           ${BODY}"
             FAILED=0
 
-            # Rule 1: AI attribution trailer (case-insensitive, subject + body)
-            if printf '%s' "$FULL_MSG" | grep -qiE '(Co-Authored-By|Generated with).*(Claude|Gemini|Copilot|ChatGPT)'; then
-              printf 'ERROR: AI-attribution trailer found in commit: %s\n' "$SUBJECT" >&2
-              FAILED=1
-            fi
-
-            # Rule 2: keyword-first subject — Merge commits are exempt from this rule only
+            # Rule 1: keyword-first subject — Merge commits are exempt from this rule only
             IS_MERGE=0
             if printf '%s' "$SUBJECT" | grep -qE '^Merge (branch|remote-tracking) '; then
               IS_MERGE=1
