@@ -75,6 +75,10 @@ commitlint:
         if printf '%s' "$SUBJECT" | grep -qE '^Merge (branch|remote-tracking) '; then
           IS_MERGE=1
         fi
+        # PR/MR merge-preview commit: "Merge <sha> into <sha>"
+        if printf '%s' "$SUBJECT" | grep -qE '^Merge [0-9a-f]+ into [0-9a-f]+$'; then
+          IS_MERGE=1
+        fi
 
         if [ "$IS_MERGE" -eq 0 ]; then
           KEYWORD_RE='^(Add|Implement|Introduce|Update|Refactor|Improve|Change|Bump|Deprecate|Remove|Delete|Drop|Fix|Correct|Resolve|Security) .+'
