@@ -48,9 +48,6 @@ jobs:
 
           check_commit() {
             SUBJECT="$1"
-            BODY="$2"
-            FULL_MSG="${SUBJECT}
-          ${BODY}"
             FAILED=0
 
             # Rule 1: keyword-first subject — Merge commits are exempt from this rule only
@@ -108,9 +105,13 @@ jobs:
           tools: composer
           coverage: none
 
-      - name: Auth git for private GitLab dependencies
-        if: ${{ secrets.GITLAB_TOKEN != '' }}
-        run: git config --global url."https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/".insteadOf "https://gitlab.com/"
+      - name: Auth git for private GitLab dependencies (only if a token is provided)
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          if [ -n "$GITLAB_TOKEN" ]; then
+            git config --global url."https://oauth2:${GITLAB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
+          fi
 
       - name: Authenticate Composer for repo.magento.com
         run: composer config --global --auth http-basic.repo.magento.com "${{ secrets.MAGENTO_PUBLIC_KEY }}" "${{ secrets.MAGENTO_PRIVATE_KEY }}"
