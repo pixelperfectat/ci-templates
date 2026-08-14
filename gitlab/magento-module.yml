@@ -15,9 +15,7 @@ image: markoshust/magento-php:8.3-fpm
 
 stages:
   - validate
-  - lint
-  - analyse
-  - test
+  - check
   - release
 
 variables:
@@ -123,26 +121,13 @@ commitlint:
         exit 1
       fi
 
-validate:
-  stage: validate
+# One job, not four. The gates were separate stages, so they already ran sequentially --
+# splitting them bought no parallelism and paid for a full `composer install` four times.
+# `composer check` is the same script developers run locally.
+check:
+  stage: check
   script:
-    - composer ci:validate
-
-lint:
-  stage: lint
-  script:
-    - composer lint
-    - composer cs
-
-analyse:
-  stage: analyse
-  script:
-    - composer stan
-
-test:
-  stage: test
-  script:
-    - composer test
+    - composer check
 
 # On a semver tag push, publish a GitLab Release using the matching CHANGELOG.md section.
 create-release:
