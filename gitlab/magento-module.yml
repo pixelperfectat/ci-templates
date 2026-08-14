@@ -13,6 +13,16 @@
 
 image: markoshust/magento-php:8.3-fpm
 
+# Without this, pushing a branch that has an open merge request runs TWO full
+# pipelines -- one `push`, one `merge_request_event` -- doubling every job.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
 stages:
   - validate
   - check
