@@ -140,6 +140,12 @@ check:
     # Runs here rather than only inside `composer check`, so no module can opt out by
     # editing its own scripts. A parent naming a child fails the pipeline.
     - php vendor/pixelperfectat/coding-standard/bin/check-module-boundaries.php
+    # Magento resolves observers, plugins and DI arguments at runtime, so a class deleted
+    # while its wiring stays behind passes every PHP-level gate and fails on a live request.
+    - php vendor/pixelperfectat/coding-standard/bin/check-xml-class-refs.php
+    # json_encode, strtotime, uniqid and the rest are valid PHP that phpcs has no sniff for
+    # and phpstan no opinion about, so only a dedicated check sees them.
+    - php vendor/pixelperfectat/coding-standard/bin/check-framework-internals.php
     - composer check
 
 # On a semver tag push, publish a GitLab Release using the matching CHANGELOG.md section.
