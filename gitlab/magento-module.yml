@@ -42,6 +42,15 @@ default:
     - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/".insteadOf "https://gitlab.com/"
     - composer config --global --auth http-basic.repo.magento.com "$MAGENTO_PUBLIC_KEY" "$MAGENTO_PRIVATE_KEY"
     - composer config --global --auth http-basic.gitlab.com gitlab-ci-token "$CI_JOB_TOKEN"
+    # A module may depend on a licensed package whose repository is issued per licence, so its URL
+    # cannot live in a shared composer.json without tying the package to one customer. Supply it
+    # through CI variables instead; modules without them are unaffected.
+    - |
+      if [ -n "${EXTRA_COMPOSER_REPO_URL:-}" ]; then
+        composer config repositories.licensed composer "$EXTRA_COMPOSER_REPO_URL"
+        composer config --global --auth "http-basic.${EXTRA_COMPOSER_REPO_HOST}" \
+          "$EXTRA_COMPOSER_REPO_USER" "$EXTRA_COMPOSER_REPO_PASS"
+      fi
     - composer install --no-interaction --no-progress --no-ansi
 
 commitlint:
