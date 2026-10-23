@@ -146,10 +146,13 @@ commitlint:
 check:
   stage: check
   variables:
-    # Infection (inside composer check) needs a coverage driver; the image ships Xdebug with
-    # coverage off. Scoped to this job so composer install does not run under Xdebug.
+    # Infection (inside composer check) needs a coverage driver. The image ships xdebug.so but
+    # does not load it; the script enables it and this sets the mode. Composer and PHPStan
+    # restart themselves without Xdebug, so only the test runs pay for it.
     XDEBUG_MODE: coverage
   script:
+    - php -m | grep -qi '^xdebug$' || docker-php-ext-enable xdebug
+    - php -m | grep -i '^xdebug$'
     # Runs here rather than only inside `composer check`, so no module can opt out by
     # editing its own scripts. A parent naming a child fails the pipeline.
     - php vendor/pixelperfectat/coding-standard/bin/check-module-boundaries.php
