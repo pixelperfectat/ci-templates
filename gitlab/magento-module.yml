@@ -11,7 +11,8 @@
 # Private inter-module deps (coding-standard, other pixelperfectat modules) are cloned via the
 # built-in CI_JOB_TOKEN — allowlist this group under each depended-on repo's CI/CD → Token Access.
 
-image: markoshust/magento-php:8.3-fpm
+# Same image the shops develop on: it ships and loads Xdebug, which Infection needs for coverage.
+image: markoshust/magento-php:8.3-fpm-4
 
 # Without this, pushing a branch that has an open merge request runs TWO full
 # pipelines -- one `push`, one `merge_request_event` -- doubling every job.
@@ -146,12 +147,10 @@ commitlint:
 check:
   stage: check
   variables:
-    # Infection (inside composer check) needs a coverage driver. The image ships xdebug.so but
-    # does not load it; the script enables it and this sets the mode. Composer and PHPStan
-    # restart themselves without Xdebug, so only the test runs pay for it.
+    # Infection (inside composer check) needs a coverage driver. The image loads Xdebug; this
+    # sets its mode. Composer and PHPStan restart themselves without Xdebug.
     XDEBUG_MODE: coverage
   script:
-    - php -m | grep -qi '^xdebug$' || docker-php-ext-enable xdebug
     - php -m | grep -i '^xdebug$'
     # Runs here rather than only inside `composer check`, so no module can opt out by
     # editing its own scripts. A parent naming a child fails the pipeline.
