@@ -6,7 +6,7 @@
 #       ref: main
 #       file: /gitlab/magento-module.yml
 #
-# Required CI/CD variables on the module project (masked):
+# Required CI/CD variables, set once on the group pixelperfect-at-m2-modules (masked, not protected):
 #   MAGENTO_PUBLIC_KEY  / MAGENTO_PRIVATE_KEY   → Composer http-basic for repo.magento.com
 # Private inter-module deps (coding-standard, other pixelperfectat modules) are cloned via the
 # built-in CI_JOB_TOKEN — allowlist this group under each depended-on repo's CI/CD → Token Access.
@@ -145,6 +145,10 @@ commitlint:
 # `composer check` is the same script developers run locally.
 check:
   stage: check
+  variables:
+    # Infection (inside composer check) needs a coverage driver; the image ships Xdebug with
+    # coverage off. Scoped to this job so composer install does not run under Xdebug.
+    XDEBUG_MODE: coverage
   script:
     # Runs here rather than only inside `composer check`, so no module can opt out by
     # editing its own scripts. A parent naming a child fails the pipeline.
