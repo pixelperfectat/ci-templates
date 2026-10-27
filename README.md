@@ -24,7 +24,7 @@ run. Pin a module to a tag instead if you want controlled, Renovate-bumped updat
 
 A `commitlint` job in the `validate` stage (GitLab) / a `commitlint` job (GitHub) rejects commits with a **wrong subject format** — subject must follow `[optional-issue] <Keyword> <text>` where Keyword is one of: `Add Implement Introduce Update Refactor Improve Change Bump Deprecate Remove Delete Drop Fix Correct Resolve Security`.
 
-`Merge branch …` / `Merge remote-tracking …` commits are exempt from this rule.
+`Merge branch …` / `Merge remote-tracking …` commits, and on GitHub the `Merge pull request #N from …` commits the merge button writes, are exempt from this rule.
 
 The job uses `alpine:latest` with `git` (GitLab) / `ubuntu-latest` (GitHub); no Composer install. On an MR/PR it checks every commit since the diff-base; on a branch push it uses `CI_COMMIT_BEFORE_SHA` / `github.event.before` and falls back to the tip commit for new branches.
 
