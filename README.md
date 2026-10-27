@@ -35,8 +35,16 @@ name: CI
 on: [push, pull_request]
 jobs:
   ci:
-    uses: pixelperfect-at-m2-modules/ci-templates/.github/workflows/magento-module.yml@main
+    uses: pixelperfectat/ci-templates/.github/workflows/magento-module.yml@<tag>
     secrets: inherit
 ```
-Works once `ci-templates` is mirrored to GitHub, with `MAGENTO_PUBLIC_KEY`/`MAGENTO_PRIVATE_KEY`
-(+ `GITLAB_TOKEN` for private GitLab deps) as Actions secrets.
+Two jobs: `commitlint`, and `check` with the same gates as GitLab: PHP 8.3 with Xdebug for coverage,
+the coding-standard checks (`check-module-boundaries`, `check-xml-class-refs`,
+`check-framework-internals`), then the module's `composer check`, which includes Infection.
+
+The module needs `pixelperfectat/coding-standard` `^0.2` in `require-dev` (from Packagist) and a
+`check` script that runs Infection. Set `MAGENTO_PUBLIC_KEY`/`MAGENTO_PRIVATE_KEY` as Actions secrets
+(+ `GITLAB_TOKEN` only for a private GitLab dependency).
+
+The workflow is used from the GitHub copy of this repo, which GitLab push-mirrors: `main` and tags
+only. Work and tag on GitLab; never push to GitHub directly.

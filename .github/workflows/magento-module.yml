@@ -4,12 +4,14 @@ name: Magento module CI
 # Consume from a module's .github/workflows/ci.yml:
 #   jobs:
 #     ci:
-#       uses: pixelperfect-at-m2-modules/ci-templates/.github/workflows/magento-module.yml@main
+#       uses: pixelperfectat/ci-templates/.github/workflows/magento-module.yml@<tag>
 #       secrets: inherit
-# Requires secrets: MAGENTO_PUBLIC_KEY, MAGENTO_PRIVATE_KEY (+ GITLAB_TOKEN if the module has a
-# private GitLab dependency, e.g. pixelperfectat/coding-standard).
-# Note: GitHub reusable workflows must live in a GitHub repo — this file works once ci-templates
-# is mirrored to GitHub. Private GitLab-hosted modules use /gitlab/magento-module.yml instead.
+# Requires secrets: MAGENTO_PUBLIC_KEY, MAGENTO_PRIVATE_KEY (+ GITLAB_TOKEN only if the module has
+# a private GitLab dependency; pixelperfectat/coding-standard comes from Packagist).
+# The module needs pixelperfectat/coding-standard ^0.2.1 in require-dev and a composer `check`
+# script that includes Infection.
+# GitHub reusable workflows must live in a GitHub repo: this file is used from the GitHub mirror of
+# ci-templates. Private GitLab-hosted modules use /gitlab/magento-module.yml instead.
 
 on:
   workflow_call:
@@ -102,18 +104,24 @@ jobs:
             exit 1
           fi
 
-  quality:
+  # One job, the same gates as /gitlab/magento-module.yml: the coding-standard checks, then the
+  # module's own `composer check` (validate, lint, cs, stan, test, infection), as developers run it.
+  check:
     runs-on: ubuntu-latest
+    env:
+      # Infection (inside composer check) needs a coverage driver. Composer and PHPStan restart
+      # themselves without Xdebug.
+      XDEBUG_MODE: coverage
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up PHP 8.3 (+ Magento extensions)
+      - name: Set up PHP 8.3 (+ Magento extensions, Xdebug for coverage)
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
           extensions: bcmath, ctype, curl, dom, gd, hash, iconv, intl, mbstring, openssl, pdo_mysql, simplexml, soap, sodium, xsl, zip, fileinfo
           tools: composer
-          coverage: none
+          coverage: xdebug
 
       - name: Auth git for private GitLab dependencies (only if a token is provided)
         env:
@@ -129,16 +137,19 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --no-ansi
 
-      - name: composer validate
-        run: composer ci:validate
+      - name: Coverage driver is loaded
+        run: php -m | grep -i '^xdebug$'
 
-      - name: Lint + coding standard
-        run: |
-          composer lint
-          composer cs
+      # Run here rather than only inside `composer check`, so no module can opt out by editing
+      # its own scripts.
+      - name: Module boundaries
+        run: php vendor/pixelperfectat/coding-standard/bin/check-module-boundaries.php
 
-      - name: Static analysis
-        run: composer stan
+      - name: Every class wired in XML exists
+        run: php vendor/pixelperfectat/coding-standard/bin/check-xml-class-refs.php
 
-      - name: Unit tests
-        run: composer test
+      - name: No native calls where Magento has a contract
+        run: php vendor/pixelperfectat/coding-standard/bin/check-framework-internals.php
+
+      - name: composer check
+        run: composer check
